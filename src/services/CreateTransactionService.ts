@@ -1,5 +1,5 @@
-// import AppError from '../errors/AppError';
-import { getCustomRepository, getRepository } from 'typeorm';
+import { getCustomRepository, getRepository, getRepository } from 'typeorm';
+import AppError from '../errors/AppError';
 import Category from '../models/Category';
 
 import Transaction from '../models/Transaction';
@@ -19,8 +19,16 @@ class CreateTransactionService {
     value,
     category_title,
   }: Request): Promise<Transaction> {
-    const transactionRepository = getRepository(Transaction);
+    const transactionRepository = getCustomRepository(TransactionsRepository);
     const categoryRepository = getRepository(Category);
+
+    if (type === 'outcome') {
+      const { total } = await transactionRepository.getBalance();
+
+      if (total - value < 0) {
+        throw new AppError('Insufficient funds');
+      }
+    }
 
     let category = await categoryRepository.findOne({
       where: { title: category_title },
@@ -36,7 +44,7 @@ class CreateTransactionService {
       title,
       type,
       value,
-      category_id: category,
+      category,
     });
 
     await transactionRepository.save(transaction);
